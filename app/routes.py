@@ -1,9 +1,9 @@
 from flask import render_template, flash, redirect, url_for
-from flask_login import current_user, login_user
+from flask_login import current_user, login_required, login_user
 import sqlalchemy as sa
 from app import app
 from flask import render_template, flash, redirect, url_for
-from app.forms import LoginForm
+from app.forms import LoginForm, RegistrationForm
 from app import db
 from app.models import User
 from flask import request
@@ -11,6 +11,7 @@ from urllib.parse import urlsplit
 
 @app.route('/')
 @app.route('/index')
+@login_required
 def index():
     user = {'username': 'user'}
     posts = []
@@ -32,3 +33,18 @@ def login():
     if not next_page or urlsplit(next_page).netloc != '':
       next_page = url_for('index')
     return redirect(next_page)
+  return render_template('login.html', title='Sign in', form=form)
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+  if current_user.is_authenticated:
+    return redirect(url_for('index'))
+  form = RegistrationForm()
+  if form.validate_on_submit():
+    user = User(username=form.username.data, email=form.email.data)
+    user.set_password(form.password.data)
+    db.session.add(user)
+    db.session.commit()
+    flash('Congretulations, you are now a registered user!')
+    return redirect(url_for('login'))
+  return render_template('register.html', title='Register', form=form)
